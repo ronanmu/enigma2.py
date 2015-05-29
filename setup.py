@@ -8,12 +8,12 @@ from distutils.core import setup
 
 setup(
     name='openwebif.py',
-    version='0.1',
+    version='0.2',
     description='Provides a python interface to interact with a device running OpenWebIf',
     author='Finbarr Brady',
     author_email='fbradyirl@users.noreply.github.com',
     url='https://github.com/fbradyirl/openwebif.py',
-    download_url = 'https://github.com/fbradyirl/openwebif.py/tarball/0.1',
+    download_url = 'https://github.com/fbradyirl/openwebif.py/tarball/0.2',
     keywords='enigma2 openwebif python cgi interface',
     packages=['openwebif'],
     classifiers = [
