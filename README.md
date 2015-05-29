@@ -2,8 +2,8 @@
 Provides a python interface to interact with a device running OpenWebIf
 
 # Installation
-Download the code, and run
-pip install -e .
+
+pip install openwebif.py
 
 # Usage
 

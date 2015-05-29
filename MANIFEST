@@ -2,4 +2,5 @@
 setup.cfg
 setup.py
 openwebif/__init__.py
-openwebif/openwebif.py
+openwebif/api.py
+openwebif/constants.py
