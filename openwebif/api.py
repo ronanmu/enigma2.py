@@ -3,6 +3,7 @@
 
 import logging
 import requests
+import json
 from xml.etree import ElementTree
 from openwebif.constants import DEFAULT_PORT
 
@@ -40,6 +41,13 @@ class Client(object):
 
         response = requests.get(url)
 
+        if response.status_code != 200:
+            _LOGGING.error("There was an error connecting to %s", url)
+            _LOGGING.error("status_code %s", response.status_code)
+            _LOGGING.error("error %s", response.error)
+
+            return
+
         try:
             tree = ElementTree.fromstring(response.content)
             result = tree.find('e2instandby').text.strip()
@@ -54,3 +62,53 @@ class Client(object):
             return
 
         return
+
+    def is_box_in_standby(self):
+        """
+        Returns True if box is now in standby, else, False
+        """
+
+        url = 'http://%s/api/statusinfo' % self._host
+        _LOGGING.info('url: %s', url)
+
+        response = requests.get(url)
+
+        _LOGGING.info('response: %s', response)
+        _LOGGING.info("status_code %s", response.status_code)
+
+        if response.status_code != 200:
+            _LOGGING.error("There was an error connecting to %s", url)
+            _LOGGING.error("status_code %s", response.status_code)
+            _LOGGING.error("error %s", response.error)
+
+            return
+
+        _LOGGING.info('r.json: %s', response.json())
+
+        in_standby = response.json()['inStandby']
+        _LOGGING.info('r.json inStandby: %s', in_standby)
+
+        return in_standby == 'true'
+
+    def get_status_info(self):
+        """
+        Returns json containing the result of <host>/api/statusinfo
+        """
+
+        url = 'http://%s/api/statusinfo' % self._host
+        _LOGGING.info('url: %s', url)
+
+        response = requests.get(url)
+
+        _LOGGING.info('response: %s', response)
+        _LOGGING.info("status_code %s", response.status_code)
+
+        if response.status_code != 200:
+            _LOGGING.error("There was an error connecting to %s", url)
+            _LOGGING.error("status_code %s", response.status_code)
+            _LOGGING.error("error %s", response.error)
+
+            return
+
+        return response.json()
+
