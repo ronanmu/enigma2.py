@@ -19,7 +19,7 @@ logging.basicConfig()
 _LOGGING = logging.getLogger(__name__)
 
 # pylint: disable=too-many-arguments
-
+# pylint: disable=redefined-builtin
 
 def build_url_base(host, port, is_https):
     """
