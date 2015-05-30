@@ -13,13 +13,13 @@ import requests
 from xml.etree import ElementTree
 from openwebif.error import OpenWebIfError, MissingParamError
 from openwebif.constants import DEFAULT_PORT
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError as ReConnError
 
 logging.basicConfig()
 _LOGGING = logging.getLogger(__name__)
 
 # pylint: disable=too-many-arguments
-# pylint: disable=redefined-builtin
+
 
 def build_url_base(host, port, is_https):
     """
@@ -74,7 +74,7 @@ class Client(object):
             _LOGGING.info("Connected OK!")
             _LOGGING.info("OpenWebIf version %s", version)
 
-        except ConnectionError as conn_err:
+        except ReConnError as conn_err:
             # _LOGGING.exception("Unable to connect to %s", host)
             raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
 
