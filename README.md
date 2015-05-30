@@ -49,6 +49,11 @@ json_response = e2_client.get_status_info()
 ```
 
 
+TODO
+------------
+https or OpenWebIf authentication is not yet supported.
+
+
 Developer
 =========
 
