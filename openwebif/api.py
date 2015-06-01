@@ -47,6 +47,11 @@ def log_response_errors(response):
         _LOGGING.error("error %s", response.error)
 
 
+def enable_logging():
+    """ Setup the logging for home assistant. """
+    logging.basicConfig(level=logging.INFO)
+
+
 class Client(object):
 
     """
@@ -55,6 +60,7 @@ class Client(object):
 
     def __init__(self, host=None, port=DEFAULT_PORT,
                  username=None, password=None, is_https=False):
+        enable_logging()
         _LOGGING.info("Initialising new openwebif client")
 
         if not host:

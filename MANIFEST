@@ -4,3 +4,4 @@ setup.py
 openwebif/__init__.py
 openwebif/api.py
 openwebif/constants.py
+openwebif/error.py
