@@ -52,10 +52,10 @@ def enable_logging():
     logging.basicConfig(level=logging.INFO)
 
 
-class Client(object):
+class CreateDevice(object):
 
     """
-    Client is the class handling the OpenWebIf interactions.
+    Create a new OpenWebIf client device.
     """
 
     def __init__(self, host=None, port=DEFAULT_PORT,

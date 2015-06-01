@@ -40,7 +40,7 @@ pip install -e .
 ```python
 import openwebif.api
 
-e2_client = openwebif.api.Client('192.168.2.5')
+e2_client = openwebif.api.CreateDevice('192.168.2.5')
 
 is_now_in_standby = e2_client.is_box_in_standby()
 is_now_in_standby = e2_client.toggle_standby()

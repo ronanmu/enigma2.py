@@ -19,6 +19,6 @@ class TestAPI(unittest.TestCase):
     def test_create(self):
         """ Test creating a new device. """
         # Bogus config
-        self.assertRaises(MissingParamError, lambda: openwebif.api.Client())
-        self.assertRaises(OpenWebIfError, lambda: openwebif.api.Client('10.10.10.4'))
+        self.assertRaises(MissingParamError, lambda: openwebif.api.CreateDevice())
+        self.assertRaises(OpenWebIfError, lambda: openwebif.api.CreateDevice('10.10.10.4'))
 
