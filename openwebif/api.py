@@ -75,8 +75,7 @@ class CreateDevice(object):
 
         try:
             _LOGGING.info("Going to probe device to test connection")
-            version = self.get_about(
-                element_to_query='e2webifversion', timeout=5)
+            version = self.get_version()
             _LOGGING.info("Connected OK!")
             _LOGGING.info("OpenWebIf version %s", version)
 
@@ -200,3 +199,10 @@ class CreateDevice(object):
             return
 
         return response.json()
+
+    def get_version(self):
+        """
+        Returns Openwebif version
+        """
+        return self.get_about(
+            element_to_query='e2webifversion', timeout=5)
