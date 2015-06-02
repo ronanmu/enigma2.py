@@ -15,7 +15,6 @@ from openwebif.error import OpenWebIfError, MissingParamError
 from openwebif.constants import DEFAULT_PORT
 from requests.exceptions import ConnectionError as ReConnError
 
-logging.basicConfig()
 _LOGGING = logging.getLogger(__name__)
 
 # pylint: disable=too-many-arguments
