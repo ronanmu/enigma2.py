@@ -39,6 +39,7 @@ pip install -e .
 ```python
 import openwebif.api
 
+# This will use http by default (not https)
 e2_client = openwebif.api.CreateDevice('192.168.2.5')
 
 is_now_in_standby = e2_client.is_box_in_standby()
