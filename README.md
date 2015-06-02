@@ -1,6 +1,6 @@
-Introduction
+# Introduction [![Build Status](https://travis-ci.org/fbradyirl/openwebif.py.svg?branch=master)](https://travis-ci.org/fbradyirl/openwebif.py) [![Coverage Status](https://img.shields.io/coveralls/fbradyirl/openwebif.py.svg)](https://coveralls.io/r/fbradyirl/openwebif.py?branch=master)
 ============
-openwebif.py is a python module providing a basic python 
+openwebif.py is a python module providing a basic python
 interface to interact with a device running OpenWebIf
 
 openwebif.py is licensed under the MIT license.
@@ -8,12 +8,12 @@ openwebif.py is licensed under the MIT license.
 Getting started
 ===============
 
-openwebif.py is compatible with OWIF 0.4 or newer. 
+openwebif.py is compatible with OWIF 0.4 or newer.
 It may work on older versions, but that has not been tested.
 
 For further info on OpenWebIf and it's API's see:
 https://github.com/E2OpenPlugins/e2openplugin-OpenWebif
-	
+
 	See file:
 	/plugin/controllers/web.py
 
