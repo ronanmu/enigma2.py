@@ -1,4 +1,4 @@
-# Introduction [![Build Status](https://travis-ci.org/fbradyirl/openwebif.py.svg?branch=master)](https://travis-ci.org/fbradyirl/openwebif.py) [![Coverage Status](https://img.shields.io/coveralls/fbradyirl/openwebif.py.svg)](https://coveralls.io/r/fbradyirl/openwebif.py?branch=master)
+# Introduction [![Build Status](https://travis-ci.org/fbradyirl/openwebif.py.svg?branch=master)](https://travis-ci.org/fbradyirl/openwebif.py) [![Coverage Status](https://coveralls.io/repos/fbradyirl/openwebif.py/badge.svg)](https://coveralls.io/r/fbradyirl/openwebif.py)
 openwebif.py is a python module providing a basic python
 interface to interact with a device running OpenWebIf
 
