@@ -30,3 +30,7 @@ class TestAPI(unittest.TestCase):
         self.assertEqual("OWIF 0.1.3", client.get_version())
         self.assertTrue(len(client.get_status_info()) > 8)
 
+        # Test that an exception doesnt get thrown
+        result = client.is_box_in_standby()
+        self.assertTrue(result is True or result is False)
+

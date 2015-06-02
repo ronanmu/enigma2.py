@@ -95,7 +95,7 @@ class CreateDevice(object):
 
         if response.status_code != 200:
             log_response_errors(response)
-            return
+            raise OpenWebIfError('Connection to OpenWebIf failed.')
 
         try:
             tree = ElementTree.fromstring(response.content)
@@ -116,21 +116,7 @@ class CreateDevice(object):
         Returns True if box is now in standby, else, False
         """
 
-        url = '%s/api/statusinfo' % self._base
-        _LOGGING.info('url: %s', url)
-
-        response = requests.get(url)
-
-        _LOGGING.info('response: %s', response)
-        _LOGGING.info("status_code %s", response.status_code)
-
-        if response.status_code != 200:
-            log_response_errors(response)
-            return
-
-        _LOGGING.info('r.json: %s', response.json())
-
-        in_standby = response.json()['inStandby']
+        in_standby = self.get_status_info()['inStandby']
         _LOGGING.info('r.json inStandby: %s', in_standby)
 
         return in_standby == 'true'
@@ -154,7 +140,7 @@ class CreateDevice(object):
 
         if response.status_code != 200:
             log_response_errors(response)
-            return None
+            raise OpenWebIfError('Connection to OpenWebIf failed.')
 
         if element_to_query is None:
             return response.content
@@ -196,7 +182,7 @@ class CreateDevice(object):
 
         if response.status_code != 200:
             log_response_errors(response)
-            return
+            raise OpenWebIfError('Connection to OpenWebIf failed.')
 
         return response.json()
 
