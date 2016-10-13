@@ -9,13 +9,14 @@ Licensed under the MIT license.
 """
 
 import logging
+import re, unicodedata
 import requests
 from xml.etree import ElementTree
 from openwebif.error import OpenWebIfError, MissingParamError
 from openwebif.constants import DEFAULT_PORT
 from requests.exceptions import ConnectionError as ReConnError
 
-_LOGGING = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # pylint: disable=too-many-arguments
 
@@ -41,9 +42,9 @@ def log_response_errors(response):
     Logs problems in a response
     """
 
-    _LOGGING.error("status_code %s", response.status_code)
+    log.error("status_code %s", response.status_code)
     if response.error:
-        _LOGGING.error("error %s", response.error)
+        log.error("error %s", response.error)
 
 
 def enable_logging():
@@ -60,10 +61,10 @@ class CreateDevice(object):
     def __init__(self, host=None, port=DEFAULT_PORT,
                  username=None, password=None, is_https=False):
         enable_logging()
-        _LOGGING.info("Initialising new openwebif client")
+        log.info("Initialising new openwebif client")
 
         if not host:
-            _LOGGING.error('Missing Openwebif host!')
+            log.error('Missing Openwebif host!')
             raise MissingParamError('Connection to OpenWebIf failed.', None)
 
         self._username = username
@@ -73,13 +74,12 @@ class CreateDevice(object):
         self._base = build_url_base(host, port, is_https)
 
         try:
-            _LOGGING.info("Going to probe device to test connection")
+            log.info("Going to probe device to test connection")
             version = self.get_version()
-            _LOGGING.info("Connected OK!")
-            _LOGGING.info("OpenWebIf version %s", version)
+            log.info("Connected OK!")
+            log.info("OpenWebIf version %s", version)
 
         except ReConnError as conn_err:
-            # _LOGGING.exception("Unable to connect to %s", host)
             raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
 
     def toggle_standby(self):
@@ -88,7 +88,7 @@ class CreateDevice(object):
         """
 
         url = '%s/web/powerstate?newstate=0' % self._base
-        _LOGGING.info('url: %s', url)
+        log.info('url: %s', url)
 
         response = requests.get(url)
 
@@ -99,14 +99,14 @@ class CreateDevice(object):
         try:
             tree = ElementTree.fromstring(response.content)
             result = tree.find('e2instandby').text.strip()
-            _LOGGING.info('e2instandby: %s', result)
+            log.info('e2instandby: %s', result)
 
             return result == 'true'
 
         except AttributeError as attib_err:
-            _LOGGING.error(
+            log.error(
                 'There was a problem toggling standby: %s', attib_err)
-            _LOGGING.error('Entire response: %s', response.content)
+            log.error('Entire response: %s', response.content)
             return
         return
 
@@ -116,7 +116,7 @@ class CreateDevice(object):
         """
 
         in_standby = self.get_status_info()['inStandby']
-        _LOGGING.info('r.json inStandby: %s', in_standby)
+        log.info('r.json inStandby: %s', in_standby)
 
         return in_standby == 'true'
 
@@ -127,15 +127,15 @@ class CreateDevice(object):
         """
 
         url = '%s/web/about' % self._base
-        _LOGGING.info('url: %s', url)
+        log.info('url: %s', url)
 
         if timeout is not None:
             response = requests.get(url, timeout=timeout)
         else:
             response = requests.get(url)
 
-        _LOGGING.info('response: %s', response)
-        _LOGGING.info("status_code %s", response.status_code)
+        log.info('response: %s', response)
+        log.info("status_code %s", response.status_code)
 
         if response.status_code != 200:
             log_response_errors(response)
@@ -149,20 +149,20 @@ class CreateDevice(object):
                 result = tree.findall(".//" + element_to_query)
 
                 if len(result) > 0:
-                    _LOGGING.info('element_to_query: %s result: %s',
-                                  element_to_query, result[0])
+                    log.info('element_to_query: %s result: %s',
+                             element_to_query, result[0])
 
                     return result[0].text.strip()
                 else:
-                    _LOGGING.error(
+                    log.error(
                         'There was a problem finding element: %s',
                         element_to_query)
 
             except AttributeError as attib_err:
-                _LOGGING.error(
+                log.error(
                     'There was a problem finding element:'
                     ' %s AttributeError: %s', element_to_query, attib_err)
-                _LOGGING.error('Entire response: %s', response.content)
+                log.error('Entire response: %s', response.content)
                 return
         return
 
@@ -172,18 +172,50 @@ class CreateDevice(object):
         """
 
         url = '%s/api/statusinfo' % self._base
-        _LOGGING.info('url: %s', url)
+        log.info('url: %s', url)
 
         response = requests.get(url)
 
-        _LOGGING.info('response: %s', response)
-        _LOGGING.info("status_code %s", response.status_code)
+        log.info('response: %s', response)
+        log.info("status_code %s", response.status_code)
 
         if response.status_code != 200:
             log_response_errors(response)
             raise OpenWebIfError('Connection to OpenWebIf failed.')
 
         return response.json()
+
+    def get_current_playing_picon_url(self):
+        """
+        Return the URL to the picon image for the currently playing channel
+        :return: The URL, or None if not available
+        """
+
+        channel_name = self.get_status_info()['currservice_station']
+        picon_name = self.get_picon_name(channel_name)
+
+        url = '%s/picon/%s.png' % (self._base, picon_name)
+        log.info('picon url: %s', url)
+        return url
+
+    def get_picon_name(self, channel_name):
+        """
+        Get the name as format is outlined here
+        https://github.com/OpenViX/enigma2/blob/cc963cd25d7e1c58701f55aa4b382e525031966e/lib/python/Components/Renderer/Picon.py
+
+        :param channel_name: The name of the channel
+        :return: the correctly formatted name
+        """
+        log.info("Getting Picon URL for : " + channel_name)
+
+        exclude_chars = ['/', '\\', '\'', '"', '`', '?', ' ', '(', ')', ':', '<', '>', '|', '.', '\n']
+        channel_name = re.sub('[%s]' % ''.join(exclude_chars), '', channel_name)
+        channel_name = channel_name.replace('&', 'and')
+        channel_name = channel_name.replace('+', 'plus')
+        channel_name = channel_name.replace('*', 'star')
+        channel_name = channel_name.lower()
+
+        return channel_name
 
     def get_version(self):
         """
