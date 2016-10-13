@@ -27,11 +27,7 @@ openwebif.py requires:
 Install
 -------
 ```python
-git clone --recursive https://github.com/fbradyirl/openwebif.py.git
-cd openwebif
-# NOTE: You might need administrator privileges to install python modules.
-pip install -r requirements.txt
-pip install -e .
+pip install openwebif.py
 ```
 
 # Usage
