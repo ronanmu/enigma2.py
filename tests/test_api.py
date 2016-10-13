@@ -22,8 +22,10 @@ class TestAPI(unittest.TestCase):
         self.assertRaises(MissingParamError, lambda: openwebif.api.CreateDevice())
         self.assertRaises(OpenWebIfError, lambda: openwebif.api.CreateDevice('10.10.10.4'))
 
+    def test_get_picon_name(self):
+        self.assertEqual(openwebif.api.CreateDevice.get_picon_name('RTÉ One'), "rteone")
 
-    # def test_status(self):
+            # def test_status(self):
     #     """ Test getting version and status. """
     #     # So bad. Using a publically accessible box.
     #     client = openwebif.api.CreateDevice('public_box_on_web.com')
