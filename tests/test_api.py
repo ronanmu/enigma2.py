@@ -9,9 +9,10 @@ Licensed under the MIT license.
 """
 # pylint: disable=protected-access
 import unittest
+
 import openwebif.api
 from openwebif.error import OpenWebIfError, MissingParamError
-from requests.exceptions import ConnectionError
+
 
 class TestAPI(unittest.TestCase):
     """ Tests openwebif.api module. """
