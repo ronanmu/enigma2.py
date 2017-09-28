@@ -1,4 +1,4 @@
-# Copyright (c) 2015 Finbarr Brady <https://github.com/fbradyirl>
+# Copyright (c) 2017 Ronan Murray <https://github.com/ronanmu>
 # Licensed under the MIT license.
 
 # Used this guide to create module
@@ -7,13 +7,13 @@
 from distutils.core import setup
 
 setup(
-    name='openwebif.py',
-    version='0.9',
-    description='Provides a python interface to interact with a device running OpenWebIf',
-    author='Finbarr Brady',
-    author_email='fbradyirl@users.noreply.github.com',
-    url='https://github.com/fbradyirl/openwebif.py',
-    download_url = 'https://github.com/fbradyirl/openwebif.py/tarball/0.9',
+    name='enigma2.py',
+    version='0.01',
+    description='Provides a python interface to interact with an Engima2 set top box running OpenWebIf',
+    author='Ronan Murray',
+    author_email='ronanmu@users.noreply.github.com',
+    url='https://github.com/ronanmu/enigma2.py',
+    download_url = 'https://github.com/ronanmu/enigma2.py/tarball/0.01',
     keywords='enigma2 openwebif python cgi interface',
     packages=['openwebif'],
     install_requires=['requests'],

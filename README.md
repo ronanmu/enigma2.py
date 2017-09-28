@@ -1,13 +1,13 @@
-# Introduction [![Build Status](https://travis-ci.org/fbradyirl/openwebif.py.svg?branch=master)](https://travis-ci.org/fbradyirl/openwebif.py) [![Coverage Status](https://coveralls.io/repos/fbradyirl/openwebif.py/badge.svg)](https://coveralls.io/r/fbradyirl/openwebif.py)
-openwebif.py is a python module providing a basic python
-interface to interact with a device running OpenWebIf
+# Introduction [![Build Status](https://travis-ci.org/ronanmu/enimga2.py.svg?branch=master)](https://travis-ci.org/ronanmu/engima2.py) [![Coverage Status](https://coveralls.io/repos/ronanmu/engima2.py/badge.svg)](https://coveralls.io/r/ronanmu/engima2.py)
+enigma2.py is a python module providing a basic python
+interface to interact with an Engima2 enabled satellite set-top-box running OpenWebIF
 
-openwebif.py is licensed under the MIT license.
+enigma2.py is licensed under the MIT license.
 
 Getting started
 ===============
 
-openwebif.py is compatible with OWIF 0.4 or newer.
+enigma2.py is compatible with OWIF 0.4 or newer.
 It may work on older versions, but that has not been tested.
 
 For further info on OpenWebIf and it's API's see:
@@ -20,23 +20,23 @@ https://github.com/E2OpenPlugins/e2openplugin-OpenWebif
 Requirements
 ------------
 
-openwebif.py requires:
+enigma2.py requires:
  * requests>=2.0
 
 
 Install
 -------
 ```python
-pip install openwebif.py
+pip install enigma2.py
 ```
 
 # Usage
 
 ```python
-import openwebif.api
+import enigma2.api
 
 # This will use http by default (not https)
-e2_client = openwebif.api.CreateDevice('192.168.2.5')
+e2_client = enigma2.api.CreateDevice('192.168.2.5')
 
 is_now_in_standby = e2_client.is_box_in_standby()
 is_now_in_standby = e2_client.toggle_standby()
@@ -53,14 +53,14 @@ TODO
 Developer
 =========
 
-openwebif.py is hosted by Github at https://github.com/fbradyirl/openwebif.py.
+enigma2.py is hosted by Github at https://github.com/ronanmu/enigma2.py.
 
 Code has been tested with the following before commit:
 
 ```python
-flake8 openwebif
-pylint openwebif
+flake8 enigma2
+pylint enigma2
 coverage run -m unittest discover tests
 ```
 
-Copyright (c) 2015 Finbarr Brady.
+Copyright (c) 2017 Ronan Murray.

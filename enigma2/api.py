@@ -1,10 +1,10 @@
 """
-openwebif.api
+enigma2.api
 ~~~~~~~~~~~~~~~~~~~~
 
-Provides methods for interacting with OpenWebIf
+Provides methods for interacting with Enigma2 powered set-top-box running OpenWebIf
 
-Copyright (c) 2015 Finbarr Brady <https://github.com/fbradyirl>
+Copyright (c) 2017 Ronan Murray <https://github.com/ronanmu>
 Licensed under the MIT license.
 """
 

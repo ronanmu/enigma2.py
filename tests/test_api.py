@@ -4,18 +4,18 @@ tests.test_api
 
 Tests the api
 
-Copyright (c) 2015 Finbarr Brady <https://github.com/fbradyirl>
+Copyright (c) 2017 Ronan Murray <https://github.com/ronanmu>
 Licensed under the MIT license.
 """
 # pylint: disable=protected-access
 import unittest
 
-import openwebif.api
-from openwebif.error import OpenWebIfError, MissingParamError
+import enigma2.api
+from enigma2.error import OpenWebIfError, MissingParamError
 
 
 class TestAPI(unittest.TestCase):
-    """ Tests openwebif.api module. """
+    """ Tests enigma2.api module. """
 
     def test_create(self):
         """ Test creating a new device. """
@@ -24,7 +24,7 @@ class TestAPI(unittest.TestCase):
         self.assertRaises(OpenWebIfError, lambda: openwebif.api.CreateDevice('10.10.10.4'))
 
     def test_get_picon_name(self):
-        self.assertEqual(openwebif.api.CreateDevice.get_picon_name('RTÉ One'), "rteone")
+        self.assertEqual(enigma2.api.CreateDevice.get_picon_name('RTÉ One'), "rteone")
 
             # def test_status(self):
     #     """ Test getting version and status. """
@@ -36,4 +36,3 @@ class TestAPI(unittest.TestCase):
     #     # Test that an exception doesnt get thrown
     #     result = client.is_box_in_standby()
     #     self.assertTrue(result is True or result is False)
-
