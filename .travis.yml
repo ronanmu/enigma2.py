@@ -5,8 +5,8 @@ install:
   - pip install -r requirements.txt
   - pip install flake8 pylint coveralls
 script:
-  - flake8 openwebif
-  - pylint openwebif
-  - coverage run --source openwebif -m unittest discover tests
+  - flake8 enigma2
+  - pylint enigma2
+  - coverage run --source enigma2 -m unittest discover tests
 after_success:
   - coveralls
