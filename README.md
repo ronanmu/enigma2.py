@@ -22,6 +22,7 @@ Requirements
 
 enigma2.py requires:
  * requests>=2.0
+ * jsonpath-rw
 
 
 Install
@@ -63,4 +64,4 @@ pylint enigma2
 coverage run -m unittest discover tests
 ```
 
-Copyright (c) 2017 Ronan Murray.
+Copyright (c) 2018 Ronan Murray.

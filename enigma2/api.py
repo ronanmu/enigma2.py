@@ -20,20 +20,6 @@ from enigma2.error import Enigma2Error
 
 _LOGGER = logging.getLogger(__name__)
 
-URL_ABOUT = "/api/about"
-URL_TOGGLE_VOLUME_MUTE = "/api/vol?set=mute"
-URL_SET_VOLUME = "/api/vol?set=set"
-URL_TOGGLE_STANDBY = "/api/powerstate?newstate=0"
-URL_STATUS_INFO = "/api/statusinfo"
-
-# Remote control commands
-URL_REMOTE_CONTROL = "/api/remotecontrol?command="
-COMMAND_VU_CHANNEL_UP = "402"
-COMMAND_VU_CHANNEL_DOWN = "403"
-COMMAND_VU_PLAY_PAUSE_TOGGLE = "207"
-
-URL_LCD_4_LINUX = "/lcd4linux/dpf.png"
-
 
 class PlaybackType(Enum):
     """ Enum for Playback Type """
@@ -42,7 +28,7 @@ class PlaybackType(Enum):
     none = 3
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,line-too-long
 
 
 def build_url_base(host, port, is_https):
@@ -122,54 +108,83 @@ class Enigma2Connection(object):
         :param new_volume: int from 0-100
         :return: True if successful, false if there was a problem
         """
+        from enigma2.constants import (URL_VOLUME, PARAM_COMMAND, COMMAND_VOL_SET)
 
         if new_volume < -1 and new_volume > 101:
             raise Enigma2Error('Volume must be between 0 and 100')
 
-        url = '%s%s' % (URL_SET_VOLUME, str(new_volume))
-        return self._check_response_result(url)
+        cmd = '%s%s' % (COMMAND_VOL_SET, str(new_volume))
+        return self._check_response_result(URL_VOLUME, [PARAM_COMMAND, cmd])
+
+    def volume_up(self):
+        """
+        Returns True if command success
+        :return:
+        """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_UP)
+
+        return self._check_response_result(URL_VOLUME, [COMMAND_VOL_SET, COMMAND_VOL_UP])
+
+    def volume_down(self):
+        """
+        Returns True if command success
+        :return:
+        """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_DOWN)
+
+        return self._check_response_result(URL_VOLUME, [COMMAND_VOL_SET, COMMAND_VOL_DOWN])
+
+    def toggle_mute(self):
+        """
+        Send mute command
+        """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_MUTE)
+
+        return self._check_response_result(URL_VOLUME, [COMMAND_VOL_SET, COMMAND_VOL_MUTE])
 
     def toggle_standby(self):
         """
         Returns True if command success, else, False
         """
-        result = self._check_response_result(URL_TOGGLE_STANDBY)
+        from enigma2.constants import (URL_TOGGLE_STANDBY, PARAM_NEWSTATE)
+
+        result = self._check_response_result(URL_TOGGLE_STANDBY, [PARAM_NEWSTATE, '0'])
         # Update standby
         self.get_status_info()
         return result
 
-    def xxtoggle_play_pause(self):
+    def toggle_play_pause(self):
         """
         Send Play Pause command
         """
+        from enigma2.constants import (URL_REMOTE_CONTROL,
+                                       PARAM_COMMAND, COMMAND_RC_PLAY_PAUSE_TOGGLE)
 
-        url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
-                          COMMAND_VU_PLAY_PAUSE_TOGGLE)
-        _LOGGER.info('url: %s', url)
-
-        return self._check_response_result(requests.get(url))
+        result = self._check_response_result(URL_REMOTE_CONTROL,
+                                             [PARAM_COMMAND, COMMAND_RC_PLAY_PAUSE_TOGGLE])
+        # Update info
+        self.get_status_info()
+        return result
 
     def channel_up(self):
         """
         Send channel up command
         """
+        from enigma2.constants import (URL_REMOTE_CONTROL,
+                                       PARAM_COMMAND, COMMAND_RC_CHANNEL_UP)
 
-        url = '%s%s' % (URL_REMOTE_CONTROL, COMMAND_VU_CHANNEL_UP)
-        return self._check_response_result(url)
+        return self._check_response_result(URL_REMOTE_CONTROL,
+                                           [PARAM_COMMAND, COMMAND_RC_CHANNEL_UP])
 
     def channel_down(self):
         """
         Send channel down command
         """
+        from enigma2.constants import (URL_REMOTE_CONTROL,
+                                       PARAM_COMMAND, COMMAND_RC_CHANNEL_DOWN)
 
-        url = '%s%s' % (URL_REMOTE_CONTROL, COMMAND_VU_CHANNEL_DOWN)
-        return self._check_response_result(url)
-
-    def mute_volume(self):
-        """
-        Send mute command
-        """
-        return self._check_response_result(URL_TOGGLE_VOLUME_MUTE)
+        return self._check_response_result(URL_REMOTE_CONTROL,
+                                           [PARAM_COMMAND, COMMAND_RC_CHANNEL_DOWN])
 
     def is_box_in_standby(self):
         """
@@ -182,6 +197,8 @@ class Enigma2Connection(object):
         Returns ElementTree containing the result of <host>/web/about
         or if element_to_query is not None, the value of that element
         """
+        from enigma2.constants import URL_ABOUT
+
         response = self._invoke_api(URL_ABOUT)
         response_json = response.json()
         output = {
@@ -193,7 +210,6 @@ class Enigma2Connection(object):
         }
         return output
 
-
     def refresh_status_info(self):
         """
         Returns json containing the result of <host>/api/statusinfo
@@ -204,11 +220,27 @@ class Enigma2Connection(object):
         """
         Returns json containing the result of <host>/api/statusinfo
         """
+        from enigma2.constants import URL_STATUS_INFO
 
         response = self._invoke_api(URL_STATUS_INFO)
         response_json = response.json()
         self._in_standby = response_json['inStandby']
         return response_json
+
+    def search_epg(self, program_name):
+        """
+        Search the EPG for the supplied program name
+        :param program_name: name of the program to search for
+        :return:
+        """
+        from enigma2.constants import (URL_EPG_SEARCH, PARAM_SEARCH)
+
+        response = self._invoke_api(URL_EPG_SEARCH, [(PARAM_SEARCH, program_name)])
+        response_json = response.json()
+        if response_json['result']:
+            return response_json['events']
+
+        return []
 
     def get_current_playback_type(self, currservice_serviceref=None):
         """
@@ -245,6 +277,8 @@ class Enigma2Connection(object):
         :param currservice_serviceref: The service_ref for the current service
         :return: The URL, or None if not available
         """
+        from enigma2.constants import URL_LCD_4_LINUX
+
         cached_info = None
         if channel_name is None:
             cached_info = self.get_status_info()
@@ -277,7 +311,7 @@ class Enigma2Connection(object):
             _LOGGER.info('picon url (already tested): %s', url)
             return url
 
-        if self.url_exists(url):
+        if self._url_exists(url):
             _LOGGER.info('picon url: %s', url)
             return url
 
@@ -294,7 +328,17 @@ class Enigma2Connection(object):
         _LOGGER.info('Could not find picon for: %s', channel_name)
         return None
 
-    def url_exists(self, url):
+    def load_services(self, bouquet_name=None):
+        """
+        Load a list of available services, optionally for the supplied bouquet
+        :param bouquet_name: name of the bouquet to use when locating services
+        :return: list of services discovered
+        """
+
+        services = self._load_bouquets(bouquet_name)
+        return services
+
+    def _url_exists(self, url):
         """
         Check if a given URL responds to a HEAD request
         :param url: url to test
@@ -334,7 +378,7 @@ class Enigma2Connection(object):
 
         return channel_name
 
-    def _invoke_api(self, url):
+    def _invoke_api(self, url, params=None):
         """
         Returns raw response from API
         :param url: URL to call
@@ -345,9 +389,9 @@ class Enigma2Connection(object):
         _LOGGER.debug('About to invoke: %s', url)
 
         if not self._username and not self._password:
-            response = requests.get(url, verify=self._verify_ssl, timeout=self._timeout)
+            response = requests.get(url, verify=self._verify_ssl, timeout=self._timeout, params=params)
         else:
-            response = requests.get(url, verify=self._verify_ssl, timeout=self._timeout,
+            response = requests.get(url, verify=self._verify_ssl, timeout=self._timeout, params=params,
                                     auth=HTTPBasicAuth(self._username, self._password))
 
         if response.status_code == 401:
@@ -362,11 +406,53 @@ class Enigma2Connection(object):
 
         return response
 
-    def _check_response_result(self, url):
+    def _check_response_result(self, url, params=None):
         """
         :param response:
         :return: Returns True if command success, else, False
         """
 
-        response = self._invoke_api(url)
+        response = self._invoke_api(url, params=params)
         return response.json()['result']
+
+    def _load_bouquets(self, bouquet_name=None):
+        """
+        Load the bouquet requested or all services
+        :param bouquet_name:
+        :return:
+        """
+        from enigma2.constants import URL_BOUQUETS
+
+        from jsonpath_rw import parse
+        _LOGGER.debug("Loading all bouquets...")
+        service_names = []
+        service_refs = []
+        e2services = []
+        bouquets_response = self._invoke_api(URL_BOUQUETS)
+        bouquets_json = bouquets_response.json()
+
+        # If bouquet name supplied, only get those channels
+        if bouquet_name in [match.value
+                            for match in parse('services[*].servicename').find(bouquets_json)]:
+            e2sub_services = [match.value
+                              for match in parse('services[*]').find(bouquets_json)]
+            for e2sub_service in e2sub_services:
+                if e2sub_service['servicename'] == bouquet_name:
+                    e2services = e2sub_service['subservices']
+
+        else:
+            e2services = [match.value for match in parse('services[*].subservices[*]').find(bouquets_json)]
+
+        for e2service in e2services:
+            service_ref = e2service['servicereference']
+            service_name = e2service['servicename']
+
+            # only add channel if we've not see it before
+            # and it's name/ref pass some basic checks to remove rubbish channels
+            if service_ref not in service_refs \
+                    and service_ref.endswith(':') \
+                    and service_name not in ['<n/a>', '(...)']:
+                service_refs.append(service_ref)
+                service_names.append(service_name)
+
+        return dict(zip(service_refs, service_names))

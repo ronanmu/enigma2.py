@@ -19,12 +19,3 @@ class Enigma2Error(Exception):
         Exception.__init__(self)
         self.message = message
         self.original = original
-
-    def __str__(self):
-        if self.original:
-            original_name = type(self.original).__name__
-            message = '%s Original exception:'\
-                ' %s, "%s"' % (self.message, original_name, str(self.original))
-            return message
-        else:
-            return self.message
