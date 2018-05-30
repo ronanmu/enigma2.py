@@ -108,13 +108,13 @@ class Enigma2Connection(object):
         :param new_volume: int from 0-100
         :return: True if successful, false if there was a problem
         """
-        from enigma2.constants import (URL_VOLUME, PARAM_COMMAND, COMMAND_VOL_SET)
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET)
 
         if new_volume < -1 and new_volume > 101:
             raise Enigma2Error('Volume must be between 0 and 100')
 
         cmd = '%s%s' % (COMMAND_VOL_SET, str(new_volume))
-        return self._check_response_result(URL_VOLUME, [PARAM_COMMAND, cmd])
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: cmd})
 
     def volume_up(self):
         """
@@ -123,7 +123,7 @@ class Enigma2Connection(object):
         """
         from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_UP)
 
-        return self._check_response_result(URL_VOLUME, [COMMAND_VOL_SET, COMMAND_VOL_UP])
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: COMMAND_VOL_UP})
 
     def volume_down(self):
         """
@@ -132,7 +132,7 @@ class Enigma2Connection(object):
         """
         from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_DOWN)
 
-        return self._check_response_result(URL_VOLUME, [COMMAND_VOL_SET, COMMAND_VOL_DOWN])
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: COMMAND_VOL_DOWN})
 
     def toggle_mute(self):
         """
@@ -140,7 +140,7 @@ class Enigma2Connection(object):
         """
         from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_MUTE)
 
-        return self._check_response_result(URL_VOLUME, [COMMAND_VOL_SET, COMMAND_VOL_MUTE])
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: COMMAND_VOL_MUTE})
 
     def toggle_standby(self):
         """
@@ -148,7 +148,7 @@ class Enigma2Connection(object):
         """
         from enigma2.constants import (URL_TOGGLE_STANDBY, PARAM_NEWSTATE)
 
-        result = self._check_response_result(URL_TOGGLE_STANDBY, [PARAM_NEWSTATE, '0'])
+        result = self._check_response_result(URL_TOGGLE_STANDBY, {PARAM_NEWSTATE: '0'})
         # Update standby
         self.get_status_info()
         return result
@@ -161,7 +161,7 @@ class Enigma2Connection(object):
                                        PARAM_COMMAND, COMMAND_RC_PLAY_PAUSE_TOGGLE)
 
         result = self._check_response_result(URL_REMOTE_CONTROL,
-                                             [PARAM_COMMAND, COMMAND_RC_PLAY_PAUSE_TOGGLE])
+                                             {PARAM_COMMAND: COMMAND_RC_PLAY_PAUSE_TOGGLE})
         # Update info
         self.get_status_info()
         return result
@@ -174,7 +174,7 @@ class Enigma2Connection(object):
                                        PARAM_COMMAND, COMMAND_RC_CHANNEL_UP)
 
         return self._check_response_result(URL_REMOTE_CONTROL,
-                                           [PARAM_COMMAND, COMMAND_RC_CHANNEL_UP])
+                                           {PARAM_COMMAND: COMMAND_RC_CHANNEL_UP})
 
     def channel_down(self):
         """
@@ -184,7 +184,7 @@ class Enigma2Connection(object):
                                        PARAM_COMMAND, COMMAND_RC_CHANNEL_DOWN)
 
         return self._check_response_result(URL_REMOTE_CONTROL,
-                                           [PARAM_COMMAND, COMMAND_RC_CHANNEL_DOWN])
+                                           {PARAM_COMMAND: COMMAND_RC_CHANNEL_DOWN})
 
     def is_box_in_standby(self):
         """
@@ -235,7 +235,7 @@ class Enigma2Connection(object):
         """
         from enigma2.constants import (URL_EPG_SEARCH, PARAM_SEARCH)
 
-        response = self._invoke_api(URL_EPG_SEARCH, [(PARAM_SEARCH, program_name)])
+        response = self._invoke_api(URL_EPG_SEARCH, {PARAM_SEARCH: program_name})
         response_json = response.json()
         if response_json['result']:
             return response_json['events']

@@ -8,6 +8,7 @@ Copyright (c) 2018 Ronan Murray <https://github.com/ronanmu>
 Licensed under the MIT license.
 """
 # pylint: disable=protected-access
+import os, sys
 import unittest
 import requests_mock
 from tests.sample_responses import (SAMPLE_ABOUT, SAMPLE_STATUS_INFO, SAMPLE_VOL13_RESPONSE, SAMPLE_POWER_RESPONSE,
@@ -39,12 +40,19 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(enigma2.api.Enigma2Connection(host='123.123.123.123'))
 
     @requests_mock.mock()
+    def test_vol_out_of_bounds(self, m):
+        self._update_test_mock(m)
+
+        device = enigma2.api.Enigma2Connection(host='123.123.123.123')
+        self.assertTrue(Enigma2Error, lambda: device.set_volume(105))
+
+    @requests_mock.mock()
     def test_about(self, m):
         """ Testing the about response"""
         self._update_test_mock(m)
         m.register_uri('GET', '/api/about', json=SAMPLE_ABOUT, status_code=200)
 
-        device = enigma2.api.Enigma2Connection(host='123.123.123.123')
+        device = enigma2.api.Enigma2Connection(host='123.123.123.123', is_https=True)
         about = device.get_about()
         self.assertEqual('Mock', about['brand'])
 
@@ -119,10 +127,10 @@ class TestAPI(unittest.TestCase):
     def test_load_sources(self, m):
         """Testing parsing the source services JSON"""
         self._update_test_mock(m)
-        with open('getallservices.json') as json_file:
+        with open(self._file_path('getallservices.json')) as json_file:
             m.register_uri('GET', '/api/getallservices', text=json_file.read(), status_code=200)
 
-        device = enigma2.api.Enigma2Connection(host='123.123.123.123')
+        device = enigma2.api.Enigma2Connection(url='https://123.123.123.123', port=2300)
         services = device.load_services()
         self.assertIsNotNone(services)
 
@@ -135,8 +143,9 @@ class TestAPI(unittest.TestCase):
 
     @requests_mock.mock()
     def test_search_epg(self, m):
+        """Testing searching the EPG"""
         self._update_test_mock(m)
-        with open('epgsearch_home_and_away.json') as json_file:
+        with open(self._file_path('epgsearch_home_and_away.json')) as json_file:
             m.register_uri('GET', '/api/epgsearch?search=Home%20and%20Away', text=json_file.read(), status_code=200)
 
         device = enigma2.api.Enigma2Connection(host='123.123.123.123')
@@ -156,4 +165,9 @@ class TestAPI(unittest.TestCase):
     #     # Test that an exception doesnt get thrown
     #     result = client.is_box_in_standby()
     #     self.assertTrue(result is True or result is False)
+
+    @staticmethod
+    def _file_path(file_name):
+        thispath = os.path.dirname(__file__)
+        return "{}/{}".format(thispath, file_name)
 
