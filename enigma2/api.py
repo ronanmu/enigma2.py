@@ -14,7 +14,6 @@ import unicodedata
 
 from enum import Enum
 import requests
-from requests.auth import HTTPBasicAuth
 from requests.exceptions import ConnectionError as ReConnError
 from enigma2.error import Enigma2Error
 
@@ -28,7 +27,7 @@ class PlaybackType(Enum):
     none = 3
 
 
-# pylint: disable=too-many-arguments,line-too-long
+# pylint: disable=too-many-arguments,line-too-long,logging-not-lazy
 
 
 def build_url_base(host, port, is_https):
@@ -47,17 +46,6 @@ def build_url_base(host, port, is_https):
 
     return base
 
-
-def log_response_errors(response):
-    """
-    Logs problems in a response
-    """
-
-    _LOGGER.error("status_code %s", response.status_code)
-    if response.error:
-        _LOGGER.error("error %s", response.error)
-
-
 def enable_logging():
     """ Setup the logging for home assistant. """
     logging.basicConfig(level=logging.INFO)
@@ -69,19 +57,24 @@ class Enigma2Connection(object):
     """
 
     def __init__(self, url=None, host=None, port=None,
-                 username=None, password=None, is_https=False, timeout=5, verify_ssl=True):
+                 username=None, password=None, is_https=False,
+                 timeout=5, verify_ssl=True, use_gzip=True):
         enable_logging()
         _LOGGER.debug("Initialising new Enigma2 OpenWebIF client")
 
-        if not host and not url:
+        if host is None and url is None:
             _LOGGER.error('Missing Enigma2 host!')
             raise Enigma2Error('Connection to Enigma2 failed - please supply connection details')
 
         self._username = username
         self._password = password
         self._timeout = timeout
+        self._use_gzip = use_gzip
         self._verify_ssl = verify_ssl
         self._in_standby = True
+
+        # Assign a new Requests Session
+        self._session = requests.Session()
 
         # Used to build a list of URLs which have been tested to exist
         # (for picons)
@@ -93,13 +86,9 @@ class Enigma2Connection(object):
         else:
             self._base = url
 
-        try:
-            _LOGGER.debug("Going to probe device to test connection")
-            self.get_status_info()
-            _LOGGER.debug("Connected OK!")
-
-        except ReConnError as conn_err:
-            raise Enigma2Error('Connection to Enigma2 failed.', conn_err)
+        _LOGGER.debug("Going to probe device to test connection")
+        self.get_status_info()
+        _LOGGER.debug("Connected OK!")
 
     def set_volume(self, new_volume):
         """
@@ -110,7 +99,7 @@ class Enigma2Connection(object):
         """
         from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET)
 
-        if new_volume < -1 and new_volume > 101:
+        if -1 > new_volume < 101:
             raise Enigma2Error('Volume must be between 0 and 100')
 
         cmd = '%s%s' % (COMMAND_VOL_SET, str(new_volume))
@@ -251,9 +240,7 @@ class Enigma2Connection(object):
         determined
         :return: PlaybackType.live or PlaybackType.recording
         """
-
         if currservice_serviceref is None:
-
             if self.is_box_in_standby():
                 return PlaybackType.none
 
@@ -285,7 +272,7 @@ class Enigma2Connection(object):
             if 'currservice_station' in cached_info:
                 channel_name = cached_info['currservice_station']
             else:
-                _LOGGER.info('No channel currently playing')
+                _LOGGER.debug('No channel currently playing')
                 return None
 
         if currservice_serviceref is None:
@@ -295,31 +282,29 @@ class Enigma2Connection(object):
 
         if currservice_serviceref.startswith('1:0:0'):
             # This is a recording, not a live channel
-
-            # Todo: parse channel name from currservice_serviceref
             # and get picon based on that
 
             # As a fallback, send LCD4Linux image (if available)
             url = '%s%s' % (self._base, URL_LCD_4_LINUX)
-            _LOGGER.info('This is a recording, trying url: %s', url)
+            _LOGGER.debug('This is a recording, trying url: %s', url)
 
         else:
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
 
         if url in self.cached_urls_which_exist:
-            _LOGGER.info('picon url (already tested): %s', url)
+            _LOGGER.debug('picon url (already tested): %s', url)
             return url
 
         if self._url_exists(url):
-            _LOGGER.info('picon url: %s', url)
+            _LOGGER.debug('picon url: %s', url)
             return url
 
         # Last ditch attenpt. If channel ends in HD, lets try
         # and get non HD picon
         if channel_name.lower().endswith('hd'):
             channel_name = channel_name[:-2]
-            _LOGGER.info('Going to look for non HD picon for: %s',
+            _LOGGER.debug('Going to look for non HD picon for: %s',
                          channel_name)
             return self.get_current_playing_picon_url(
                 ''.join(channel_name.split()),
@@ -388,21 +373,27 @@ class Enigma2Connection(object):
         url = '%s%s' % (self._base, url)
         _LOGGER.debug('About to invoke: %s', url)
 
-        if not self._username and not self._password:
-            response = requests.get(url, verify=self._verify_ssl, timeout=self._timeout, params=params)
-        else:
-            response = requests.get(url, verify=self._verify_ssl, timeout=self._timeout, params=params,
-                                    auth=HTTPBasicAuth(self._username, self._password))
+        if self._username is not None and self._password is not None:
+            self._session.auth = (self._username, self._password)
 
-        if response.status_code == 401:
-            _LOGGER.warning('Engima2 Authentication failure')
-            raise Enigma2Error('Authentication failure - check username and password')
-        elif response.status_code == 500:
-            _LOGGER.error('Engima2 server error')
-            log_response_errors(response)
-            raise Enigma2Error('Engima2 server error for request' + url)
-        elif response.status_code == 200:
-            _LOGGER.debug('Response received OK')
+        if self._use_gzip:
+            self._session.headers.update({'Accept-Encoding': 'gzip'})
+
+        # Try to invoke the URL
+        try:
+            response = self._session.get(url, verify=self._verify_ssl, timeout=self._timeout, params=params)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as errh:
+            if response.status_code == 401:
+                raise Enigma2Error('Authentication failure - check username and password')
+            elif response.status_code == 404:
+                raise Enigma2Error(('URL not found %', url))
+            else:
+                _LOGGER.error('Enigma2 HTTP Error')
+                raise Enigma2Error(message='Enigma2 HTTP Error', original=errh)
+        except requests.exceptions.ConnectionError as errc:
+            _LOGGER.error('Failed to connect to server %', url, errc)
+            raise Enigma2Error(message='Failed to connect to server', original=errc)
 
         return response
 

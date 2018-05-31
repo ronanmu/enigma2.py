@@ -23,6 +23,33 @@ SAMPLE_MUTE_RESPONSE = {
 	"ismute": True
 }
 
+SAMPLE_EMPTY_TIMER_LIST = {
+	"timers": [],
+	"result": True,
+	"locations": [
+		"/media/hdd/movie/"
+	]
+}
+
+SAMPLE_EMPTY_EPG_SEARCH = {
+	"events": [],
+	"result": True
+}
+
+SAMPLE_STANDBY_STATUS_INFO = {
+	"inStandby": "true",
+	"currservice_begin": "",
+	"muted": True,
+	"isRecording": "false",
+	"volume": 50,
+	"currservice_fulldescription": "N/A",
+	"currservice_name": "N/A",
+	"currservice_filename": "",
+	"transcoding": False,
+	"currservice_end": "",
+	"currservice_description": ""
+}
+
 SAMPLE_STATUS_INFO = {
 	"inStandby": False,
 	"currservice_begin": "21:00",
