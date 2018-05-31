@@ -14,7 +14,6 @@ import unicodedata
 
 from enum import Enum
 import requests
-from requests.exceptions import ConnectionError as ReConnError
 from enigma2.error import Enigma2Error
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +26,7 @@ class PlaybackType(Enum):
     none = 3
 
 
-# pylint: disable=too-many-arguments,line-too-long,logging-not-lazy
+# pylint: disable=too-many-arguments,line-too-long,logging-not-lazy,too-many-instance-attributes
 
 
 def build_url_base(host, port, is_https):
@@ -304,8 +303,7 @@ class Enigma2Connection(object):
         # and get non HD picon
         if channel_name.lower().endswith('hd'):
             channel_name = channel_name[:-2]
-            _LOGGER.debug('Going to look for non HD picon for: %s',
-                         channel_name)
+            _LOGGER.debug('Going to look for non HD picon for: %s', channel_name)
             return self.get_current_playing_picon_url(
                 ''.join(channel_name.split()),
                 currservice_serviceref)
@@ -392,7 +390,7 @@ class Enigma2Connection(object):
                 _LOGGER.error('Enigma2 HTTP Error')
                 raise Enigma2Error(message='Enigma2 HTTP Error', original=errh)
         except requests.exceptions.ConnectionError as errc:
-            _LOGGER.error('Failed to connect to server %', url, errc)
+            _LOGGER.error(('Failed to connect to server %', url), errc)
             raise Enigma2Error(message='Failed to connect to server', original=errc)
 
         return response
