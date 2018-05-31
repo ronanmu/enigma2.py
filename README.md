@@ -1,5 +1,7 @@
-# Introduction [![Build Status](https://travis-ci.org/ronanmu/enimga2.py.svg?branch=master)](https://travis-ci.org/ronanmu/engima2.py) [![Coverage Status](https://coveralls.io/repos/ronanmu/engima2.py/badge.svg)](https://coveralls.io/r/ronanmu/engima2.py)
-enigma2.py is a python module providing a basic python
+# Introduction 
+[![Build Status](https://travis-ci.org/ronanmu/enigma2.py.svg?branch=master)](https://travis-ci.org/ronanmu/enigma2.py) [![Coverage Status](https://coveralls.io/repos/ronanmu/enigma2.py/badge.svg)](https://coveralls.io/r/ronanmu/enigma2.py)
+
+enigma2.py is a python module providing a python
 interface to interact with an Engima2 enabled satellite set-top-box running OpenWebIF
 
 enigma2.py is licensed under the MIT license.
@@ -13,15 +15,15 @@ It may work on older versions, but that has not been tested.
 For further info on OpenWebIf and it's API's see:
 https://github.com/E2OpenPlugins/e2openplugin-OpenWebif
 
-	See file:
-	/plugin/controllers/web.py
 
+Details of the full list of functions available in OpenWebIf are listed [here](https://dream.reichholf.net/wiki/Enigma2:WebInterface)
 
 Requirements
 ------------
 
 enigma2.py requires:
  * requests>=2.0
+ * jsonpath-rw
 
 
 Install
@@ -35,20 +37,21 @@ pip install enigma2.py
 ```python
 import enigma2.api
 
-# This will use http by default (not https)
-e2_client = enigma2.api.CreateDevice('192.168.2.5')
+# Connect to an Enigma2 box at http://123.123.123.123
+device = enigma2.api.Enigma2Connection(host='123.123.123.123')
 
-is_now_in_standby = e2_client.is_box_in_standby()
-is_now_in_standby = e2_client.toggle_standby()
-xml_response = e2_client.get_about()
-json_response = e2_client.get_status_info()
+# Power on the device
+is_now_in_standby = device.is_box_in_standby()
+
+# Set the volume to 45
+request_success = device.set_volume(45)
+
+# Search for Home and Away in the current EPG
+epg_results = device.search_epg('Home and Away')
+
 ```
 
 
-TODO
-------------
- * https or OpenWebIf authentication is not yet supported.
- * Add get_picon function
 
 Developer
 =========
@@ -57,10 +60,10 @@ enigma2.py is hosted by Github at https://github.com/ronanmu/enigma2.py.
 
 Code has been tested with the following before commit:
 
-```python
+```shell
 flake8 enigma2
 pylint enigma2
-coverage run -m unittest discover tests
+coverage run --source enigma2 -m unittest discover tests
 ```
 
-Copyright (c) 2017 Ronan Murray.
+Copyright (c) 2018 Ronan Murray.

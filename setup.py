@@ -1,4 +1,4 @@
-# Copyright (c) 2017 Ronan Murray <https://github.com/ronanmu>
+# Copyright (c) 2018 Ronan Murray <https://github.com/ronanmu>
 # Licensed under the MIT license.
 
 # Used this guide to create module
@@ -15,8 +15,8 @@ setup(
     url='https://github.com/ronanmu/enigma2.py',
     download_url = 'https://github.com/ronanmu/enigma2.py/tarball/0.01',
     keywords='enigma2 openwebif python cgi interface',
-    packages=['openwebif'],
-    install_requires=['requests'],
+    packages=['enigma2'],
+    install_requires=['requests', 'jsonpath-rw'],
     classifiers = [
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',

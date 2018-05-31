@@ -4,37 +4,19 @@ enigma2.api
 
 Provides methods for interacting with Enigma2 powered set-top-box running OpenWebIf
 
-Copyright (c) 2017 Ronan Murray <https://github.com/ronanmu>
+Copyright (c) 2018 Ronan Murray <https://github.com/ronanmu>
 Licensed under the MIT license.
 """
 
 import logging
 import re
 import unicodedata
-from xml.etree import ElementTree
 
 from enum import Enum
 import requests
-from requests.exceptions import ConnectionError as ReConnError
-
-from openwebif.constants import DEFAULT_PORT
-from openwebif.error import OpenWebIfError, MissingParamError
+from enigma2.error import Enigma2Error
 
 _LOGGER = logging.getLogger(__name__)
-
-URL_ABOUT = "/web/about"
-URL_TOGGLE_VOLUME_MUTE = "/web/vol?set=mute"
-URL_SET_VOLUME = "/api/vol?set=set"
-URL_TOGGLE_STANDBY = "/api/powerstate?newstate=0"
-URL_STATUS_INFO = "/api/statusinfo"
-
-# Remote control commands
-URL_REMOTE_CONTROL = "/api/remotecontrol?command="
-COMMAND_VU_CHANNEL_UP = "402"
-COMMAND_VU_CHANNEL_DOWN = "403"
-COMMAND_VU_PLAY_PAUSE_TOGGLE = "207"
-
-URL_LCD_4_LINUX = "/lcd4linux/dpf.png"
 
 
 class PlaybackType(Enum):
@@ -44,7 +26,7 @@ class PlaybackType(Enum):
     none = 3
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,line-too-long,logging-not-lazy,too-many-instance-attributes
 
 
 def build_url_base(host, port, is_https):
@@ -57,59 +39,55 @@ def build_url_base(host, port, is_https):
 
     base += "://"
     base += host
-    base += ":"
-    base += str(port)
+    if port:
+        base += ":"
+        base += str(port)
 
     return base
-
-
-def log_response_errors(response):
-    """
-    Logs problems in a response
-    """
-
-    _LOGGER.error("status_code %s", response.status_code)
-    if response.error:
-        _LOGGER.error("error %s", response.error)
-
 
 def enable_logging():
     """ Setup the logging for home assistant. """
     logging.basicConfig(level=logging.INFO)
 
 
-class CreateDevice(object):
+class Enigma2Connection(object):
     """
-    Create a new OpenWebIf client device.
+    Create a new Connection to an Enigma.
     """
 
-    def __init__(self, host=None, port=DEFAULT_PORT,
-                 username=None, password=None, is_https=False):
+    def __init__(self, url=None, host=None, port=None,
+                 username=None, password=None, is_https=False,
+                 timeout=5, verify_ssl=True, use_gzip=True):
         enable_logging()
-        _LOGGER.info("Initialising new openwebif client")
+        _LOGGER.debug("Initialising new Enigma2 OpenWebIF client")
 
-        if not host:
-            _LOGGER.error('Missing Openwebif host!')
-            raise MissingParamError('Connection to OpenWebIf failed.', None)
+        if host is None and url is None:
+            _LOGGER.error('Missing Enigma2 host!')
+            raise Enigma2Error('Connection to Enigma2 failed - please supply connection details')
 
         self._username = username
         self._password = password
+        self._timeout = timeout
+        self._use_gzip = use_gzip
+        self._verify_ssl = verify_ssl
+        self._in_standby = True
+
+        # Assign a new Requests Session
+        self._session = requests.Session()
 
         # Used to build a list of URLs which have been tested to exist
         # (for picons)
         self.cached_urls_which_exist = []
 
         # Now build base url
-        self._base = build_url_base(host, port, is_https)
-        self._in_standby = False
-        try:
-            _LOGGER.info("Going to probe device to test connection")
-            version = self.get_version()
-            _LOGGER.info("Connected OK!")
-            _LOGGER.info("OpenWebIf version %s", version)
+        if not url:
+            self._base = build_url_base(host, port, is_https)
+        else:
+            self._base = url
 
-        except ReConnError as conn_err:
-            raise OpenWebIfError('Connection to OpenWebIf failed.', conn_err)
+        _LOGGER.debug("Going to probe device to test connection")
+        self.get_status_info()
+        _LOGGER.debug("Connected OK!")
 
     def set_volume(self, new_volume):
         """
@@ -118,24 +96,47 @@ class CreateDevice(object):
         :param new_volume: int from 0-100
         :return: True if successful, false if there was a problem
         """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET)
 
-        assert -1 << new_volume << 101, "Volume must be between " \
-                                        "0 and 100"
+        if -1 > new_volume < 101:
+            raise Enigma2Error('Volume must be between 0 and 100')
 
-        url = '%s%s%s' % (self._base, URL_SET_VOLUME, str(new_volume))
-        _LOGGER.info('url: %s', url)
+        cmd = '%s%s' % (COMMAND_VOL_SET, str(new_volume))
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: cmd})
 
-        return self._check_reponse_result(requests.get(url))
+    def volume_up(self):
+        """
+        Returns True if command success
+        :return:
+        """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_UP)
+
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: COMMAND_VOL_UP})
+
+    def volume_down(self):
+        """
+        Returns True if command success
+        :return:
+        """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_DOWN)
+
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: COMMAND_VOL_DOWN})
+
+    def toggle_mute(self):
+        """
+        Send mute command
+        """
+        from enigma2.constants import (URL_VOLUME, COMMAND_VOL_SET, COMMAND_VOL_MUTE)
+
+        return self._check_response_result(URL_VOLUME, {COMMAND_VOL_SET: COMMAND_VOL_MUTE})
 
     def toggle_standby(self):
         """
         Returns True if command success, else, False
         """
+        from enigma2.constants import (URL_TOGGLE_STANDBY, PARAM_NEWSTATE)
 
-        url = '%s%s' % (self._base, URL_TOGGLE_STANDBY)
-        _LOGGER.info('url: %s', url)
-
-        result = self._check_reponse_result(requests.get(url))
+        result = self._check_response_result(URL_TOGGLE_STANDBY, {PARAM_NEWSTATE: '0'})
         # Update standby
         self.get_status_info()
         return result
@@ -144,62 +145,34 @@ class CreateDevice(object):
         """
         Send Play Pause command
         """
+        from enigma2.constants import (URL_REMOTE_CONTROL,
+                                       PARAM_COMMAND, COMMAND_RC_PLAY_PAUSE_TOGGLE)
 
-        url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
-                          COMMAND_VU_PLAY_PAUSE_TOGGLE)
-        _LOGGER.info('url: %s', url)
+        result = self._check_response_result(URL_REMOTE_CONTROL,
+                                             {PARAM_COMMAND: COMMAND_RC_PLAY_PAUSE_TOGGLE})
+        # Update info
+        self.get_status_info()
+        return result
 
-        return self._check_reponse_result(requests.get(url))
-
-    def set_channel_up(self):
+    def channel_up(self):
         """
         Send channel up command
         """
+        from enigma2.constants import (URL_REMOTE_CONTROL,
+                                       PARAM_COMMAND, COMMAND_RC_CHANNEL_UP)
 
-        url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
-                          COMMAND_VU_CHANNEL_UP)
-        _LOGGER.info('url: %s', url)
+        return self._check_response_result(URL_REMOTE_CONTROL,
+                                           {PARAM_COMMAND: COMMAND_RC_CHANNEL_UP})
 
-        return self._check_reponse_result(requests.get(url))
-
-    def set_channel_down(self):
+    def channel_down(self):
         """
         Send channel down command
         """
+        from enigma2.constants import (URL_REMOTE_CONTROL,
+                                       PARAM_COMMAND, COMMAND_RC_CHANNEL_DOWN)
 
-        url = '%s%s%s' % (self._base, URL_REMOTE_CONTROL,
-                          COMMAND_VU_CHANNEL_DOWN)
-        _LOGGER.info('url: %s', url)
-
-        return self._check_reponse_result(requests.get(url))
-
-    def mute_volume(self):
-        """
-        Send mute command
-        """
-        url = '%s%s' % (self._base, URL_TOGGLE_VOLUME_MUTE)
-        _LOGGER.info('url: %s', url)
-
-        response = requests.get(url)
-        if response.status_code != 200:
-            return False
-
-        # Dont want to deal with ElementTree, return true
-        return True
-
-    @staticmethod
-    def _check_reponse_result(response):
-        """
-
-        :param response:
-        :return: Returns True if command success, else, False
-        """
-
-        if response.status_code != 200:
-            log_response_errors(response)
-            raise OpenWebIfError('Connection to OpenWebIf failed.')
-
-        return response.json()['result']
+        return self._check_response_result(URL_REMOTE_CONTROL,
+                                           {PARAM_COMMAND: COMMAND_RC_CHANNEL_DOWN})
 
     def is_box_in_standby(self):
         """
@@ -207,48 +180,23 @@ class CreateDevice(object):
         """
         return self._in_standby
 
-    def get_about(self, element_to_query=None, timeout=None):
+    def get_about(self):
         """
         Returns ElementTree containing the result of <host>/web/about
         or if element_to_query is not None, the value of that element
         """
+        from enigma2.constants import URL_ABOUT
 
-        url = '%s%s' % (self._base, URL_ABOUT)
-        _LOGGER.info('url: %s', url)
-
-        if timeout is not None:
-            response = requests.get(url, timeout=timeout)
-        else:
-            response = requests.get(url)
-
-        if response.status_code != 200:
-            log_response_errors(response)
-            raise OpenWebIfError('Connection to OpenWebIf failed.')
-
-        if element_to_query is None:
-            return response.content
-        else:
-            try:
-                tree = ElementTree.fromstring(response.content)
-                result = tree.findall(".//" + element_to_query)
-
-                if len(result) > 0:
-                    _LOGGER.info('element_to_query: %s result: %s',
-                                 element_to_query, result[0])
-
-                    return result[0].text.strip()
-                else:
-                    _LOGGER.error(
-                        'There was a problem finding element: %s',
-                        element_to_query)
-
-            except AttributeError as attib_err:
-                _LOGGER.error(
-                    'There was a problem finding element:'
-                    ' %s AttributeError: %s', element_to_query, attib_err)
-                _LOGGER.error('Entire response: %s', response.content)
-                return
-        return
+        response = self._invoke_api(URL_ABOUT)
+        response_json = response.json()
+        output = {
+            "webifver": response_json['info']['webifver'],
+            "imagedistro": response_json['info']['imagedistro'],
+            "brand": response_json['info']['brand'],
+            "boxtype": response_json['info']['boxtype'],
+            "uptime": response_json['info']['uptime']
+        }
+        return output
 
     def refresh_status_info(self):
         """
@@ -260,24 +208,27 @@ class CreateDevice(object):
         """
         Returns json containing the result of <host>/api/statusinfo
         """
+        from enigma2.constants import URL_STATUS_INFO
 
-        url = '%s%s' % (self._base, URL_STATUS_INFO)
-        _LOGGER.info('url: %s', url)
+        response = self._invoke_api(URL_STATUS_INFO)
+        response_json = response.json()
+        self._in_standby = response_json['inStandby']
+        return response_json
 
-        response = requests.get(url)
+    def search_epg(self, program_name):
+        """
+        Search the EPG for the supplied program name
+        :param program_name: name of the program to search for
+        :return:
+        """
+        from enigma2.constants import (URL_EPG_SEARCH, PARAM_SEARCH)
 
-        if response.status_code != 200:
-            _LOGGER.info("status_code %s", response.status_code)
-            log_response_errors(response)
-            self._in_standby = True
-            raise OpenWebIfError('Connection to OpenWebIf failed.')
+        response = self._invoke_api(URL_EPG_SEARCH, {PARAM_SEARCH: program_name})
+        response_json = response.json()
+        if response_json['result']:
+            return response_json['events']
 
-        _LOGGER.info('response: %s', response.json())
-
-        if 'inStandby' in response.json():
-            self._in_standby = response.json()['inStandby'] == 'true'
-
-        return response.json()
+        return []
 
     def get_current_playback_type(self, currservice_serviceref=None):
         """
@@ -288,9 +239,7 @@ class CreateDevice(object):
         determined
         :return: PlaybackType.live or PlaybackType.recording
         """
-
         if currservice_serviceref is None:
-
             if self.is_box_in_standby():
                 return PlaybackType.none
 
@@ -314,13 +263,15 @@ class CreateDevice(object):
         :param currservice_serviceref: The service_ref for the current service
         :return: The URL, or None if not available
         """
+        from enigma2.constants import URL_LCD_4_LINUX
+
         cached_info = None
         if channel_name is None:
             cached_info = self.get_status_info()
             if 'currservice_station' in cached_info:
                 channel_name = cached_info['currservice_station']
             else:
-                _LOGGER.info('No channel currently playing')
+                _LOGGER.debug('No channel currently playing')
                 return None
 
         if currservice_serviceref is None:
@@ -330,32 +281,29 @@ class CreateDevice(object):
 
         if currservice_serviceref.startswith('1:0:0'):
             # This is a recording, not a live channel
-
-            # Todo: parse channel name from currservice_serviceref
             # and get picon based on that
 
             # As a fallback, send LCD4Linux image (if available)
             url = '%s%s' % (self._base, URL_LCD_4_LINUX)
-            _LOGGER.info('This is a recording, trying url: %s', url)
+            _LOGGER.debug('This is a recording, trying url: %s', url)
 
         else:
             picon_name = self.get_picon_name(channel_name)
             url = '%s/picon/%s.png' % (self._base, picon_name)
 
         if url in self.cached_urls_which_exist:
-            _LOGGER.info('picon url (already tested): %s', url)
+            _LOGGER.debug('picon url (already tested): %s', url)
             return url
 
-        if self.url_exists(url):
-            _LOGGER.info('picon url: %s', url)
+        if self._url_exists(url):
+            _LOGGER.debug('picon url: %s', url)
             return url
 
         # Last ditch attenpt. If channel ends in HD, lets try
         # and get non HD picon
         if channel_name.lower().endswith('hd'):
             channel_name = channel_name[:-2]
-            _LOGGER.info('Going to look for non HD picon for: %s',
-                         channel_name)
+            _LOGGER.debug('Going to look for non HD picon for: %s', channel_name)
             return self.get_current_playing_picon_url(
                 ''.join(channel_name.split()),
                 currservice_serviceref)
@@ -363,7 +311,17 @@ class CreateDevice(object):
         _LOGGER.info('Could not find picon for: %s', channel_name)
         return None
 
-    def url_exists(self, url):
+    def load_services(self, bouquet_name=None):
+        """
+        Load a list of available services, optionally for the supplied bouquet
+        :param bouquet_name: name of the bouquet to use when locating services
+        :return: list of services discovered
+        """
+
+        services = self._load_bouquets(bouquet_name)
+        return services
+
+    def _url_exists(self, url):
         """
         Check if a given URL responds to a HEAD request
         :param url: url to test
@@ -387,7 +345,7 @@ class CreateDevice(object):
         :param channel_name: The name of the channel
         :return: the correctly formatted name
         """
-        _LOGGER.info("Getting Picon URL for : " + channel_name)
+        _LOGGER.debug("Getting Picon URL for : " + channel_name)
 
         channel_name = unicodedata.normalize('NFKD', channel_name) \
             .encode('ASCII', 'ignore')
@@ -403,9 +361,87 @@ class CreateDevice(object):
 
         return channel_name
 
-    def get_version(self):
+    def _invoke_api(self, url, params=None):
         """
-        Returns Openwebif version
+        Returns raw response from API
+        :param url: URL to call
+        :return: Response object
         """
-        return self.get_about(
-            element_to_query='e2webifversion', timeout=5)
+
+        url = '%s%s' % (self._base, url)
+        _LOGGER.debug('About to invoke: %s', url)
+
+        if self._username is not None and self._password is not None:
+            self._session.auth = (self._username, self._password)
+
+        if self._use_gzip:
+            self._session.headers.update({'Accept-Encoding': 'gzip'})
+
+        # Try to invoke the URL
+        try:
+            response = self._session.get(url, verify=self._verify_ssl, timeout=self._timeout, params=params)
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as errh:
+            if response.status_code == 401:
+                raise Enigma2Error('Authentication failure - check username and password')
+            elif response.status_code == 404:
+                raise Enigma2Error(('URL not found %', url))
+            else:
+                _LOGGER.error('Enigma2 HTTP Error')
+                raise Enigma2Error(message='Enigma2 HTTP Error', original=errh)
+        except requests.exceptions.ConnectionError as errc:
+            _LOGGER.error(('Failed to connect to server %', url), errc)
+            raise Enigma2Error(message='Failed to connect to server', original=errc)
+
+        return response
+
+    def _check_response_result(self, url, params=None):
+        """
+        :param response:
+        :return: Returns True if command success, else, False
+        """
+
+        response = self._invoke_api(url, params=params)
+        return response.json()['result']
+
+    def _load_bouquets(self, bouquet_name=None):
+        """
+        Load the bouquet requested or all services
+        :param bouquet_name:
+        :return:
+        """
+        from enigma2.constants import URL_BOUQUETS
+
+        from jsonpath_rw import parse
+        _LOGGER.debug("Loading all bouquets...")
+        service_names = []
+        service_refs = []
+        e2services = []
+        bouquets_response = self._invoke_api(URL_BOUQUETS)
+        bouquets_json = bouquets_response.json()
+
+        # If bouquet name supplied, only get those channels
+        if bouquet_name in [match.value
+                            for match in parse('services[*].servicename').find(bouquets_json)]:
+            e2sub_services = [match.value
+                              for match in parse('services[*]').find(bouquets_json)]
+            for e2sub_service in e2sub_services:
+                if e2sub_service['servicename'] == bouquet_name:
+                    e2services = e2sub_service['subservices']
+
+        else:
+            e2services = [match.value for match in parse('services[*].subservices[*]').find(bouquets_json)]
+
+        for e2service in e2services:
+            service_ref = e2service['servicereference']
+            service_name = e2service['servicename']
+
+            # only add channel if we've not see it before
+            # and it's name/ref pass some basic checks to remove rubbish channels
+            if service_ref not in service_refs \
+                    and service_ref.endswith(':') \
+                    and service_name not in ['<n/a>', '(...)']:
+                service_refs.append(service_ref)
+                service_names.append(service_name)
+
+        return dict(zip(service_refs, service_names))
